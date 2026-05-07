@@ -21,10 +21,16 @@ enum PosixSpawn {
         executablePath: String,
         arguments: [String],
         workingDirectory: URL,
+        sandboxProfileURL: URL? = nil,
         timeoutSeconds: Int? = nil
     ) throws -> PosixSpawnResult {
         let stdoutURL = workingDirectory.appendingPathComponent("stdout.log")
         let stderrURL = workingDirectory.appendingPathComponent("stderr.log")
+        let launch = launchCommand(
+            executablePath: executablePath,
+            arguments: arguments,
+            sandboxProfileURL: sandboxProfileURL
+        )
 
         var actions: posix_spawn_file_actions_t?
         try throwIfFailed(posix_spawn_file_actions_init(&actions), operation: "posix_spawn_file_actions_init")
@@ -40,7 +46,7 @@ enum PosixSpawn {
         try throwIfFailed(posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_SETPGROUP)), operation: "posix_spawnattr_setflags")
         try throwIfFailed(posix_spawnattr_setpgroup(&attributes, 0), operation: "posix_spawnattr_setpgroup")
 
-        let rawArguments = ([executablePath] + arguments).map { strdup($0) }
+        let rawArguments = ([launch.executablePath] + launch.arguments).map { strdup($0) }
         defer {
             for pointer in rawArguments {
                 free(pointer)
@@ -49,14 +55,28 @@ enum PosixSpawn {
         var argv = rawArguments + [nil]
 
         var pid: pid_t = 0
-        let spawnStatus = posix_spawn(&pid, executablePath, &actions, &attributes, &argv, nil)
-        try throwIfFailed(spawnStatus, operation: "posix_spawn \(executablePath)")
+        let spawnStatus = posix_spawn(&pid, launch.executablePath, &actions, &attributes, &argv, nil)
+        try throwIfFailed(spawnStatus, operation: "posix_spawn \(launch.executablePath)")
 
         let waitStatus = try wait(for: pid, timeoutSeconds: timeoutSeconds)
 
         let stdout = try Data(contentsOf: stdoutURL)
         let stderr = try Data(contentsOf: stderrURL)
         return PosixSpawnResult(exitCode: exitCode(from: waitStatus), stdout: stdout, stderr: stderr)
+    }
+
+    private static func launchCommand(
+        executablePath: String,
+        arguments: [String],
+        sandboxProfileURL: URL?
+    ) -> (executablePath: String, arguments: [String]) {
+        guard let sandboxProfileURL = sandboxProfileURL else {
+            return (executablePath, arguments)
+        }
+        return (
+            PackageRunnerSandbox.sandboxExecPath,
+            ["-f", sandboxProfileURL.path, executablePath] + arguments
+        )
     }
 
     private static func throwIfFailed(_ status: Int32, operation: String) throws {

@@ -54,7 +54,8 @@ struct DecryptService {
         try write(upload, to: job.inputURL)
         try writeMetadata(job.metadata, in: job.directoryURL)
 
-        let result = try runDecryptRunner(for: job)
+        let sandboxProfileURL = try PackageRunnerSandbox.writeProfile(jobDirectory: job.directoryURL)
+        let result = try runDecryptRunner(for: job, sandboxProfileURL: sandboxProfileURL)
         return response(for: result, job: job)
     }
 
@@ -68,7 +69,7 @@ struct DecryptService {
         return directory.appendingPathComponent("output.ipa")
     }
 
-    private func runDecryptRunner(for job: DecryptJob) throws -> PosixSpawnResult {
+    private func runDecryptRunner(for job: DecryptJob, sandboxProfileURL: URL) throws -> PosixSpawnResult {
         let arguments = [
             "package",
             "--input", job.inputURL.path,
@@ -79,6 +80,7 @@ struct DecryptService {
             executablePath: Self.currentExecutablePath(),
             arguments: arguments,
             workingDirectory: job.directoryURL,
+            sandboxProfileURL: sandboxProfileURL,
             timeoutSeconds: Self.runnerTimeoutSeconds
         )
     }
