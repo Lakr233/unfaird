@@ -42,6 +42,8 @@ These are fixed runtime contracts.
 
 - The UnfairKit extraction directory must be `$TMPDIR/../X/unfair/{UDID}`.
 - Resolve `$TMPDIR` dynamically at process runtime. Launchd can change it across daemon starts.
+- Do not override, rewrite, or sandbox-remap `TMPDIR` for decrypt/package runs.
+- Sandbox profiles must allow the existing `$TMPDIR` and `$TMPDIR/../X/unfair` paths instead of moving UnfairKit work elsewhere.
 - Preserve mtime and chmod from the IPA entries during extraction and when replacing entries in the output IPA.
 - Keep temporary `.sinf` copies metadata-preserving.
 
