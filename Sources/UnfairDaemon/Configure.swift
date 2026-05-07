@@ -1,6 +1,6 @@
 import Vapor
 
-func configure(_ app: Application, hostname: String = "127.0.0.1", port: Int = 8080) throws {
+func configure(_ app: Application, hostname: String = "127.0.0.1", port: Int = 6347) throws {
     try DecryptService.prepareWorkDirectoryForStartup()
     DecryptService.startExpiredJobCleanup()
 

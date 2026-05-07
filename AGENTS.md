@@ -14,7 +14,7 @@ Run locally:
 
 ```bash
 swift build
-swift run UnfairDaemon serve --hostname 127.0.0.1 --port 8080
+swift run UnfairDaemon serve
 ```
 
 ## API
@@ -23,7 +23,7 @@ Decrypt an IPA:
 
 ```bash
 curl -sS -F "ipa=@/path/to/app.ipa" \
-  http://127.0.0.1:8080/api/v1/decrypt
+  http://127.0.0.1:6347/api/v1/decrypt
 ```
 
 Decrypt jobs always run with verbose UnfairKit logs enabled.
@@ -33,7 +33,7 @@ The response includes `exit.code`, `exit.stdout`, `exit.stderr`, `exit.download_
 Download a successful output:
 
 ```bash
-curl -L -o output.ipa http://127.0.0.1:8080/api/v1/decrypt/<job-id>/output
+curl -L -o output.ipa http://127.0.0.1:6347/api/v1/decrypt/<job-id>/output
 ```
 
 ## Decrypt Runtime Invariants
@@ -49,12 +49,10 @@ These are fixed runtime contracts.
 
 ## Deploy
 
-Deployment uses `UNFAIRD_DEPLOY_REMOTE`:
+Use the scripts in `deploy/` for install and service management.
 
-```bash
-UNFAIRD_DEPLOY_REMOTE=user@host deploy/deploy.sh
-```
+Keep tracked docs and agent notes free of private deployment details:
 
-The deploy script rsyncs this repo to `${UNFAIRD_DEPLOY_DIR:-unfaird}` under the remote login's home directory and prints the remote install command.
-
-`make install` builds release binaries as the current user and uses `sudo` inside `deploy/install-launchdaemon.sh` for system install steps.
+- Do not write real hostnames, LAN IPs, user accounts, passwords, machine names, live process IDs, or live service status into docs.
+- Prefer placeholders such as `user@host`, `/path/to/app.ipa`, and `<job-id>` in examples.
+- Keep README concise and operational. Avoid promotional language and public-facing deployment detail.

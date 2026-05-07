@@ -8,6 +8,10 @@
     <array>
         <string>/usr/local/lib/unfaird/UnfairDaemon</string>
         <string>serve</string>
+        <string>--hostname</string>
+        <string>127.0.0.1</string>
+        <string>--port</string>
+        <string>6347</string>
     </array>
     <key>RunAtLoad</key>
     <true/>

@@ -1,22 +1,25 @@
-UNFAIRD
+unfaird
 
-Licensed under MIT, requires macOS <= 11.2.3 for runtime decrypt operations.
+Small local HTTP service for IPA processing.
 
-swift run UnfairDaemon --help for more details.
+Requires macOS 11.2.3 or earlier for runtime decrypt operations.
 
 Build:
   swift build
 
 Run:
-  swift run UnfairDaemon serve --hostname 127.0.0.1 --port 8080
+  swift run UnfairDaemon serve
 
-Install LaunchDaemon:
-  make install
+Health:
+  curl http://127.0.0.1:6347/health
 
 Decrypt:
-  curl -sS -F "ipa=@/path/to/app.ipa" http://127.0.0.1:8080/api/v1/decrypt
+  curl -sS -F "ipa=@/path/to/app.ipa" http://127.0.0.1:6347/api/v1/decrypt
 
 Download:
-  curl -L -o output.ipa http://127.0.0.1:8080/api/v1/decrypt/<job-id>/output
+  curl -L -o output.ipa http://127.0.0.1:6347/api/v1/decrypt/<job-id>/output
+
+CLI help:
+  swift run UnfairDaemon --help
 
 Use this project only with IPAs you own or have permission to analyze.

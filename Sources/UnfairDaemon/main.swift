@@ -21,7 +21,7 @@ struct Serve: ParsableCommand {
     var hostname = "127.0.0.1"
 
     @ArgumentParser.Option(help: "Port to bind.")
-    var port = 8080
+    var port = 6347
 
     func run() throws {
         try checkSupportedOS()
