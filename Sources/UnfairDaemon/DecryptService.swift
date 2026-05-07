@@ -51,11 +51,20 @@ struct DecryptService {
         )
         defer { reservation.release() }
 
-        try write(upload, to: job.inputURL)
+        let packageWorkingDirectory = try PackageRunnerSandbox.packageWorkingDirectory(for: job.id)
+        try FileManager.default.createDirectory(at: packageWorkingDirectory, withIntermediateDirectories: true)
+        let packageInputURL = packageWorkingDirectory.appendingPathComponent("input.ipa")
+
+        try write(upload, to: packageInputURL)
         try writeMetadata(job.metadata, in: job.directoryURL)
 
         let sandboxProfileURL = try PackageRunnerSandbox.writeProfile(jobDirectory: job.directoryURL)
-        let result = try runDecryptRunner(for: job, sandboxProfileURL: sandboxProfileURL)
+        let result = try runDecryptRunner(
+            for: job,
+            inputURL: packageInputURL,
+            packageWorkingDirectory: packageWorkingDirectory,
+            sandboxProfileURL: sandboxProfileURL
+        )
         return response(for: result, job: job)
     }
 
@@ -69,11 +78,17 @@ struct DecryptService {
         return directory.appendingPathComponent("output.ipa")
     }
 
-    private func runDecryptRunner(for job: DecryptJob, sandboxProfileURL: URL) throws -> PosixSpawnResult {
+    private func runDecryptRunner(
+        for job: DecryptJob,
+        inputURL: URL,
+        packageWorkingDirectory: URL,
+        sandboxProfileURL: URL
+    ) throws -> PosixSpawnResult {
         let arguments = [
             "package",
-            "--input", job.inputURL.path,
+            "--input", inputURL.path,
             "--output", job.outputURL.path,
+            "--working-directory", packageWorkingDirectory.path,
             "--verbose",
         ]
         return try PosixSpawn.run(
@@ -441,10 +456,6 @@ private struct DecryptJob {
     let id: UUID
     let directoryURL: URL
     let validateUntil: Int
-
-    var inputURL: URL {
-        directoryURL.appendingPathComponent("input.ipa")
-    }
 
     var outputURL: URL {
         directoryURL.appendingPathComponent("output.ipa")

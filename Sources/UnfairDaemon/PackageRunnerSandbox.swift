@@ -4,16 +4,22 @@ import Vapor
 enum PackageRunnerSandbox {
     static let sandboxExecPath = "/usr/bin/sandbox-exec"
 
+    static func packageWorkingDirectory(for jobID: UUID) throws -> URL {
+        try packageTemporaryRoot()
+            .appendingPathComponent(jobID.uuidString.lowercased(), isDirectory: true)
+            .standardizedFileURL
+    }
+
     static func writeProfile(jobDirectory: URL) throws -> URL {
         guard FileManager.default.isExecutableFile(atPath: sandboxExecPath) else {
             throw Abort(.internalServerError, reason: "sandbox-exec missing")
         }
 
-        let temporaryDirectory = processTemporaryDirectory()
-        let tempRoot = packageTemporaryRoot()
-        try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+        let runtimeTempRoot = try runtimeTemporaryContainerRoot()
+        let processTempRoot = processTemporaryContainerRoot()
+        try FileManager.default.createDirectory(at: try packageTemporaryRoot(), withIntermediateDirectories: true)
 
-        let writableFilters = pathFilters(for: [jobDirectory, temporaryDirectory, tempRoot])
+        let writableFilters = pathFilters(for: [jobDirectory, runtimeTempRoot, processTempRoot])
             .map { "    \($0)" }
             .joined(separator: "\n")
 
@@ -36,14 +42,20 @@ enum PackageRunnerSandbox {
         return profileURL
     }
 
-    private static func processTemporaryDirectory() -> URL {
-        let tmpDir = ProcessInfo.processInfo.environment["TMPDIR"] ?? NSTemporaryDirectory()
-        return URL(fileURLWithPath: tmpDir, isDirectory: true).standardizedFileURL
+    private static func runtimeTemporaryContainerRoot() throws -> URL {
+        try RuntimeEnvironment.resolveTemporaryDirectory()
+            .deletingLastPathComponent()
+            .standardizedFileURL
     }
 
-    private static func packageTemporaryRoot() -> URL {
-        processTemporaryDirectory()
+    private static func processTemporaryContainerRoot() -> URL {
+        URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
             .deletingLastPathComponent()
+            .standardizedFileURL
+    }
+
+    private static func packageTemporaryRoot() throws -> URL {
+        try runtimeTemporaryContainerRoot()
             .appendingPathComponent("X", isDirectory: true)
             .appendingPathComponent("unfair", isDirectory: true)
             .standardizedFileURL
@@ -55,6 +67,7 @@ enum PackageRunnerSandbox {
 
         for url in urls {
             for path in canonicalPaths(for: url) where seen.insert(path).inserted {
+                filters.append("(literal \(quoted(path)))")
                 filters.append("(subpath \(quoted(path)))")
             }
         }
@@ -63,12 +76,33 @@ enum PackageRunnerSandbox {
     }
 
     private static func canonicalPaths(for url: URL) -> [String] {
-        let standardized = url.standardizedFileURL.path
-        let resolved = URL(fileURLWithPath: standardized).resolvingSymlinksInPath().path
-        if standardized == resolved {
-            return [standardized]
+        let candidates = [
+            url.standardizedFileURL.path,
+            URL(fileURLWithPath: url.standardizedFileURL.path).resolvingSymlinksInPath().path,
+        ].flatMap(varPathAliases)
+
+        var paths: [String] = []
+        var seen = Set<String>()
+        for path in candidates where seen.insert(path).inserted {
+            paths.append(path)
         }
-        return [standardized, resolved]
+        return paths
+    }
+
+    private static func varPathAliases(for path: String) -> [String] {
+        if path == "/var" {
+            return [path, "/private/var"]
+        }
+        if path.hasPrefix("/var/") {
+            return [path, "/private" + path]
+        }
+        if path == "/private/var" {
+            return [path, "/var"]
+        }
+        if path.hasPrefix("/private/var/") {
+            return [path, String(path.dropFirst("/private".count))]
+        }
+        return [path]
     }
 
     private static func quoted(_ value: String) -> String {

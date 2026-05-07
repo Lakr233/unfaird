@@ -11,7 +11,7 @@ let package = Package(
         .executable(name: "UnfairDaemon", targets: ["UnfairDaemon"]),
     ],
     dependencies: [
-        .package(name: "unfair-swift", url: "https://github.com/Lakr233/unfair.git", .exact("0.1.1")),
+        .package(name: "unfair-swift", url: "https://github.com/Lakr233/unfair.git", .exact("0.1.4")),
         .package(url: "https://github.com/apple/swift-argument-parser.git", .upToNextMinor(from: "1.0.0")),
         .package(url: "https://github.com/vapor/vapor.git", .exact("4.60.0")),
     ],

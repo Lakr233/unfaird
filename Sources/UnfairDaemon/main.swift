@@ -46,6 +46,9 @@ struct Package: ParsableCommand {
     @ArgumentParser.Option(name: .customLong("output"), help: "Output .ipa path.")
     var output: String
 
+    @ArgumentParser.Option(name: .customLong("working-directory"), help: "Scratch directory under /var/folders/bg/<token>/X.")
+    var workingDirectory: String?
+
     @ArgumentParser.Flag(name: .long, help: "Show detailed UnfairKit logs.")
     var verbose = false
 
@@ -54,7 +57,8 @@ struct Package: ParsableCommand {
             print(message)
         }).process(
             input: fileURL(input),
-            output: fileURL(output)
+            output: fileURL(output),
+            workingDirectory: workingDirectory.map(fileURL)
         )
     }
 }
